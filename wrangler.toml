@@ -3,10 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2026-04-05"
 
 [vars]
-TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА"
+TELEGRAM_BOT_TOKEN = "8699578830:AAH2M-BYvjDRls9rg6MCGXdxmz5phDMe1AE"
 CHANNEL_USERNAME = "belxxx"
-CHANNEL_LINK = "https://t.me/belxxx"
-BOT_USERNAME = "BelxxxScriptsBot"
+CHANNEL_LINK = "https://t.me/Belxxx"
+BOT_USERNAME = "belxxx_bot"
 DEVELOPER_ID = "bananabonono"
 SUPPORT_CONTACT = "@bananabonono"
 
