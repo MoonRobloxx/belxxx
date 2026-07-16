@@ -221,7 +221,7 @@ export default {
         // ==========================================
         bot.onCommand('update', async (ctx) => {
             const userId = ctx.from.id;
-            const ADMIN_ID = 123456789; // ЗАМЕНИ НА СВОЙ ID!
+            const ADMIN_ID = 6582678360; // ЗАМЕНИ НА СВОЙ ID!
             
             if (userId !== ADMIN_ID) {
                 await ctx.reply('❌ У тебя нет прав на обновление скриптов.');
