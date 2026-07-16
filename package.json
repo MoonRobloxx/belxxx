@@ -1,10 +1,13 @@
 {
   "name": "telegram-bot",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Бот belxxx",
+  "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev"
   },
   "dependencies": {
     "workergram": "^1.0.0"
