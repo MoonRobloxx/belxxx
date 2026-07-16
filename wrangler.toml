@@ -1,6 +1,6 @@
 name = "telegram-bot"
 main = "src/index.ts"
-compatibility_date = "2026-02-07"
+compatibility_date = "2024-05-07"
 node_compat = true
 
 [vars]
@@ -8,6 +8,3 @@ TELEGRAM_BOT_TOKEN = "8699578830:AAH2M-BYvjDRls9rg6MCGXdxmz5phDMe1AE"
 
 [build]
 command = "npm run build"
-
-[env.production]
-vars = { TELEGRAM_BOT_TOKEN = "8699578830:AAH2M-BYvjDRls9rg6MCGXdxmz5phDMe1AE" }
