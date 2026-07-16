@@ -1,9 +1,14 @@
 name = "telegram-bot"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2026-04-05"
 
 [vars]
 TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА"
+CHANNEL_USERNAME = "belxxx"
+CHANNEL_LINK = "https://t.me/belxxx"
+BOT_USERNAME = "BelxxxScriptsBot"
+DEVELOPER_ID = "bananabonono"
+SUPPORT_CONTACT = "@bananabonono"
 
 [build]
 command = "npm run build"
