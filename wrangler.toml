@@ -1,10 +1,10 @@
 name = "telegram-bot"
 main = "src/index.ts"
-compatibility_date = "2024-05-07"
-node_compat = true
+compatibility_date = "2026-05-07"
+nodejs_compat = true
 
 [vars]
-TELEGRAM_BOT_TOKEN = "8699578830:AAH2M-BYvjDRls9rg6MCGXdxmz5phDMe1AE"
+TELEGRAM_BOT_TOKEN = "8699578830:AAH2M-BYvjDRls9rg6MCGXdxmz5phDMe1A"
 
 [build]
 command = "npm run build"
