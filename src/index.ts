@@ -1,6 +1,5 @@
 // =====================================================
-// БОТ ДЛЯ ВЫДАЧИ СКРИПТОВ ИЗ GITHUB
-// Пользователь пишет название скрипта → бот проверяет подписку
+// ТЕЛЕГРАМ БОТ ДЛЯ ВЫДАЧИ СКРИПТОВ
 // Версия: 3.0.0
 // Разработчик: @bananabonono (belxxx)
 // =====================================================
@@ -8,94 +7,70 @@
 import { Bot, filters } from 'workergram';
 
 // =====================================================
-// 1. КОНФИГУРАЦИЯ (ЗАМЕНИ НА СВОИ ЗНАЧЕНИЯ!)
+// 1. КОНФИГУРАЦИЯ
 // =====================================================
 const CONFIG = {
-    // ---- НАСТРОЙКИ КАНАЛА ----
-    CHANNEL_USERNAME: "Belxxx",          // ← ТВОЙ КАНАЛ (без @)
-    CHANNEL_LINK: "https://t.me/Belxxx", // ← ССЫЛКА НА КАНАЛ
-    
-    // ---- НАСТРОЙКИ БОТА ----
-    BOT_USERNAME: "belxxx_bot",    // ← ИМЯ БОТА (без @)
-    VERSION: "3.0.0",
-    DEVELOPER_ID: "@bananabonono",        // ← ТВОЙ ЮЗЕРНЕЙМ
-    SUPPORT_CONTACT: "@bananabonono",    // ← ТВОЙ КОНТАКТ
-    
-    // ---- НАСТРОЙКИ GITHUB ----
+    CHANNEL_USERNAME: "Belxxx",
+    CHANNEL_LINK: "https://t.me/Belxxx",
+    BOT_USERNAME: "belxxx_bot",
+    VERSION: "1.0.0",
+    DEVELOPER_ID: "@bananabonono",
+    SUPPORT_CONTACT: "@bananabonono",
     GITHUB_RAW_URL: "https://raw.githubusercontent.com/belxxxdev/scripts/main/",
     INDEX_FILE: "index.json",
+    ADMIN_ID: 6582678360,
 };
 
 // =====================================================
-// 2. ЗАГРУЗКА СКРИПТОВ ИЗ GITHUB
+// 2. ЗАГРУЗКА СКРИПТОВ
 // =====================================================
 let cachedScripts: Record<string, string> = {};
 let lastUpdateTime = 0;
-const CACHE_TTL = 300000; // 5 минут
+const CACHE_TTL = 3600000;
 
 async function loadScriptsFromGitHub(env: any): Promise<Record<string, string>> {
     const scripts: Record<string, string> = {};
     
     try {
         const indexUrl = `${CONFIG.GITHUB_RAW_URL}${CONFIG.INDEX_FILE}`;
-        console.log(`📥 Загрузка списка скриптов: ${indexUrl}`);
-        
         const response = await fetch(indexUrl);
         if (!response.ok) {
-            console.error(`❌ Не удалось загрузить index.json: ${response.status}`);
-            return getDefaultScripts();
+            return scripts;
         }
         
         const data = await response.json();
         const scriptList = data.scripts || [];
         
-        console.log(`📋 Найдено скриптов: ${scriptList.length}`);
-        
         for (const scriptName of scriptList) {
             try {
                 const scriptUrl = `${CONFIG.GITHUB_RAW_URL}${scriptName}.lua`;
-                console.log(`📥 Загрузка: ${scriptName}.lua`);
-                
                 const scriptResponse = await fetch(scriptUrl);
                 if (scriptResponse.ok) {
                     scripts[scriptName] = await scriptResponse.text();
-                    console.log(`✅ Загружен: ${scriptName}.lua`);
-                } else {
-                    console.log(`❌ Не найден: ${scriptName}.lua`);
                 }
             } catch (e) {
-                console.log(`❌ Ошибка загрузки ${scriptName}.lua:`, e);
+                console.log(`❌ Ошибка загрузки ${scriptName}.lua`);
             }
         }
         
         return scripts;
         
     } catch (error) {
-        console.error('❌ Ошибка загрузки скриптов из GitHub:', error);
-        return getDefaultScripts();
+        return scripts;
     }
-}
-
-function getDefaultScripts(): Record<string, string> {
-    return {
-        "example": `print("Hello from LUA!")\n-- Пример скрипта`,
-        "bypass": `-- Скрипт для обхода\nprint("Bypass works!")`,
-    };
 }
 
 async function getScripts(env: any): Promise<Record<string, string>> {
     const now = Date.now();
     if (now - lastUpdateTime > CACHE_TTL || Object.keys(cachedScripts).length === 0) {
-        console.log('🔄 Обновление кэша скриптов...');
         cachedScripts = await loadScriptsFromGitHub(env);
         lastUpdateTime = now;
-        console.log(`✅ Кэш обновлён: ${Object.keys(cachedScripts).length} скриптов`);
     }
     return cachedScripts;
 }
 
 // =====================================================
-// 3. ФУНКЦИЯ ПРОВЕРКИ ПОДПИСКИ
+// 3. ПРОВЕРКА ПОДПИСКИ
 // =====================================================
 async function isUserSubscribed(bot: Bot, userId: number, channelUsername: string): Promise<boolean> {
     try {
@@ -103,106 +78,119 @@ async function isUserSubscribed(bot: Bot, userId: number, channelUsername: strin
         const member = await bot.api.getChatMember(chat.id, userId);
         return ['creator', 'administrator', 'member'].includes(member.status);
     } catch (error) {
-        console.error('Ошибка проверки подписки:', error);
         return false;
     }
 }
 
 // =====================================================
-// 4. ГЛАВНЫЙ ОБРАБОТЧИК
+// 4. HTML
+// =====================================================
+const HTML_PAGE = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belxxx Bot</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { background: #000000; height: 100vh; }
+    </style>
+</head>
+<body>
+</body>
+</html>`;
+
+// =====================================================
+// 5. ГЛАВНЫЙ ОБРАБОТЧИК
 // =====================================================
 export default {
     async fetch(request: Request, env: any, ctx: any) {
         const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
         const SCRIPTS = await getScripts(env);
 
+        if (request.method === 'GET') {
+            return new Response(HTML_PAGE, {
+                headers: {
+                    'Content-Type': 'text/html',
+                    'Cache-Control': 'public, max-age=3600'
+                }
+            });
+        }
+
+        if (request.method !== 'POST') {
+            return new Response('Method not allowed', { status: 405 });
+        }
+
         // ==========================================
-        // 4.1. КОМАНДА /START
+        // /START
         // ==========================================
         bot.onCommand('start', async (ctx) => {
             const userId = ctx.from.id;
             const args = ctx.message.text?.split(' ')[1] || '';
             
-            // Если есть параметр (например, /start roblox)
             if (args && SCRIPTS[args]) {
-                // Проверяем подписку
                 const isSubscribed = await isUserSubscribed(bot, userId, CONFIG.CHANNEL_USERNAME);
                 
                 if (isSubscribed) {
-                    // Подписан → выдаём скрипт
                     await ctx.reply(
-                        `✅ Вот твой скрипт!\n\n\`\`\`lua\n${SCRIPTS[args]}\n\`\`\`\n\n📋 Нажми на текст, чтобы скопировать его.`,
+                        `✅ Вот твой скрипт! / Here is your script!\n\n\`\`\`lua\n${SCRIPTS[args]}\n\`\`\`\n\n📋 Нажми на текст, чтобы скопировать его. / Click on the text to copy it.`,
                         { parse_mode: 'MarkdownV2' }
                     );
                 } else {
-                    // Не подписан → просим подписаться
                     await ctx.reply(
-                        `❌ Чтобы получить скрипт, подпишись на наш канал!\n\n` +
-                        `📌 Скрипт: ${args}.lua\n\n` +
-                        `👇 Подпишись и нажми "Перепроверить".`,
+                        `🇷🇺: Чтобы получить скрипт, подпишись на наш канал!\n` +
+                        `🇺🇸: To get the script, subscribe to our channel!\n\n` +
+                        `📌 Скрипт / Script: ${args}.lua\n\n` +
+                        `👇 Подпишись и нажми "Перепроверить" / Subscribe and click "Check again".`,
                         {
                             reply_markup: {
                                 inline_keyboard: [
-                                    [{ text: '📢 Подписаться на канал', url: CONFIG.CHANNEL_LINK }],
-                                    [{ text: '🔄 Перепроверить', callback_data: `check_${args}` }]
+                                    [{ text: '📢 Подписаться / Subscribe', url: CONFIG.CHANNEL_LINK }],
+                                    [{ text: '🔄 Перепроверить / Check again', callback_data: `check_${args}` }]
                                 ]
                             }
                         }
                     );
                 }
-            } else {
-                // Обычный /start без параметра → показываем список скриптов
-                const scriptList = Object.keys(SCRIPTS).map((name, i) => 
-                    `${i+1}. ${name}.lua`
-                ).join('\n');
-                
-                await ctx.reply(
-                    `👋 Привет! Я выдаю LUA-скрипты.\n\n` +
-                    `📚 Чтобы получить скрипт, просто напиши его название.\n` +
-                    `📦 Доступные скрипты:\n${scriptList}\n\n` +
-                    `📌 Пример: напиши "roblox" и я выдам скрипт.\n\n` +
-                    `❓ Вопросы: ${CONFIG.SUPPORT_CONTACT}`
-                );
+                return;
             }
+            
+            // ПРИВЕТСТВИЕ
+            await ctx.reply(
+                `🇷🇺: Добро пожаловать в Belxxx_bot - бота для выдачи скриптов с минимальными требованиями!\n` +
+                `🇺🇸: Welcome to Belxxx_bot - a script delivery bot with minimal requirements!\n\n` +
+                `😌 Версия / Version: ${CONFIG.VERSION}\n` +
+                `❤️ Мой канал / My channel: @${CONFIG.CHANNEL_USERNAME}`
+            );
         });
 
         // ==========================================
-        // 4.2. КОМАНДА /HELP
+        // /HELP
         // ==========================================
         bot.onCommand('help', async (ctx) => {
             await ctx.reply(
-                `🇷🇺/🇺🇸 По вопросам пишите ${CONFIG.SUPPORT_CONTACT}\n\n` +
-                `📚 Доступные команды:\n` +
-                `/start - Показать список скриптов\n` +
-                `/help - Помощь\n` +
-                `/info - Информация о боте\n` +
-                `/scripts - Все скрипты со ссылками\n` +
-                `/update - Обновить скрипты из GitHub (админ)\n\n` +
-                `📌 Чтобы получить скрипт, просто напиши его название.\n` +
-                `Например: "roblox" или "bypass"\n\n` +
-                `❓ Вопросы: ${CONFIG.SUPPORT_CONTACT}`
+                `🇷🇺: По вопросам пишите ${CONFIG.SUPPORT_CONTACT}\n` +
+                `🇺🇸: For questions, write to ${CONFIG.SUPPORT_CONTACT}`
             );
         });
 
         // ==========================================
-        // 4.3. КОМАНДА /INFO
+        // /INFO
         // ==========================================
         bot.onCommand('info', async (ctx) => {
             await ctx.reply(
-                `🤖 BelxxxScripts (LUA)\n` +
-                `Версия / Version: ${CONFIG.VERSION}\n` +
-                `Разработчик / Developer: @${CONFIG.DEVELOPER_ID}\n` +
-                `Канал / Channel: @${CONFIG.CHANNEL_USERNAME}\n` +
-                `Статус / Status: ✅ Работает\n\n` +
-                `📦 Скриптов в базе: ${Object.keys(SCRIPTS).length}\n` +
-                `📁 Источник: GitHub\n` +
-                `📄 Формат: .lua\n\n` +
-                `❓ Вопросы: ${CONFIG.SUPPORT_CONTACT}`
+                `🤖 BelxxxScripts\n` +
+                `🇷🇺: Версия / 🇺🇸: Version: ${CONFIG.VERSION}\n` +
+                `🇷🇺: Разработчик / 🇺🇸: Developer: ${CONFIG.DEVELOPER_ID}\n` +
+                `🇷🇺: Канал / 🇺🇸: Channel: @${CONFIG.CHANNEL_USERNAME}\n` +
+                `🇷🇺: Статус / 🇺🇸: Status: ✅ Работает / Working\n\n` +
+                `📦 🇷🇺: Скриптов / 🇺🇸: Scripts: ${Object.keys(SCRIPTS).length}\n\n` +
+                `🇷🇺: По вопросам пишите / 🇺🇸: For questions, write to: ${CONFIG.SUPPORT_CONTACT}`
             );
         });
 
         // ==========================================
-        // 4.4. КОМАНДА /SCRIPTS - список всех скриптов
+        // /SCRIPTS
         // ==========================================
         bot.onCommand('scripts', async (ctx) => {
             const scriptList = Object.keys(SCRIPTS).map((name) => 
@@ -210,158 +198,119 @@ export default {
             ).join('\n\n');
             
             await ctx.reply(
-                `📚 Все доступные скрипты:\n\n${scriptList}\n\n` +
-                `📌 Напиши название скрипта, чтобы получить его.\n` +
-                `Например: "roblox"`
+                `📚 🇷🇺: Все скрипты / 🇺🇸: All scripts:\n\n${scriptList}\n\n` +
+                `🇷🇺: По вопросам пишите / 🇺🇸: For questions, write to: ${CONFIG.SUPPORT_CONTACT}`
             );
         });
 
         // ==========================================
-        // 4.5. КОМАНДА /UPDATE - обновить скрипты
+        // /UPDATE
         // ==========================================
         bot.onCommand('update', async (ctx) => {
             const userId = ctx.from.id;
-            const ADMIN_ID = 6582678360; // ЗАМЕНИ НА СВОЙ ID!
             
-            if (userId !== ADMIN_ID) {
-                await ctx.reply('❌ У тебя нет прав на обновление скриптов.');
+            if (userId !== CONFIG.ADMIN_ID) {
+                await ctx.reply(
+                    `🇷🇺: У тебя нет прав.\n` +
+                    `🇺🇸: You don't have permission.`
+                );
                 return;
             }
             
-            await ctx.reply('🔄 Обновляю скрипты из GitHub...');
+            await ctx.reply(
+                `🔄 🇷🇺: Обновляю скрипты... / 🇺🇸: Updating scripts...`
+            );
             cachedScripts = await loadScriptsFromGitHub(env);
             lastUpdateTime = Date.now();
             
             await ctx.reply(
-                `✅ Скрипты обновлены!\n` +
-                `📦 Загружено скриптов: ${Object.keys(cachedScripts).length}`
+                `✅ 🇷🇺: Скрипты обновлены! / 🇺🇸: Scripts updated!\n` +
+                `📦 🇷🇺: Загружено / 🇺🇸: Loaded: ${Object.keys(cachedScripts).length}`
             );
         });
 
         // ==========================================
-        // 4.6. ОБРАБОТЧИК КНОПКИ "ПЕРЕПРОВЕРИТЬ"
+        // КНОПКА "ПЕРЕПРОВЕРИТЬ"
         // ==========================================
-        bot.onCallbackQuery(async (ctx) => {
-            const data = ctx.callbackQuery.data || '';
+        bot.onCallbackQuery(filters.callbackData(/check_.+/), async (ctx) => {
+            const scriptName = ctx.callbackQuery.data.replace('check_', '');
+            const userId = ctx.from.id;
             
-            // Проверяем, что это кнопка "Перепроверить" (check_имя_скрипта)
-            if (data.startsWith('check_')) {
-                const scriptName = data.replace('check_', '');
-                const userId = ctx.from.id;
-                
-                // Проверяем подписку
-                const isSubscribed = await isUserSubscribed(bot, userId, CONFIG.CHANNEL_USERNAME);
-                
-                if (isSubscribed) {
-                    // Подписался → выдаём скрипт
-                    if (SCRIPTS[scriptName]) {
-                        await ctx.editMessageText(
-                            `✅ Подписка подтверждена!\n\n` +
-                            `📌 Скрипт: ${scriptName}.lua\n\n` +
-                            `\`\`\`lua\n${SCRIPTS[scriptName]}\n\`\`\``,
-                            { parse_mode: 'MarkdownV2' }
-                        );
-                        await ctx.answerCallbackQuery('✅ Скрипт получен!');
-                    } else {
-                        await ctx.editMessageText(
-                            `❌ Скрипт "${scriptName}" не найден.`
-                        );
-                        await ctx.answerCallbackQuery();
-                    }
-                } else {
-                    // Всё ещё не подписан
+            const isSubscribed = await isUserSubscribed(bot, userId, CONFIG.CHANNEL_USERNAME);
+            
+            if (isSubscribed) {
+                if (SCRIPTS[scriptName]) {
+                    await ctx.editMessageText(
+                        `✅ 🇷🇺: Подписка подтверждена! / 🇺🇸: Subscription confirmed!\n\n` +
+                        `📌 🇷🇺: Скрипт / 🇺🇸: Script: ${scriptName}.lua\n\n` +
+                        `\`\`\`lua\n${SCRIPTS[scriptName]}\n\`\`\``,
+                        { parse_mode: 'MarkdownV2' }
+                    );
                     await ctx.answerCallbackQuery(
-                        '❌ Ты ещё не подписался на канал! Подпишись и нажми "Перепроверить" снова.',
-                        { show_alert: true }
+                        `🇷🇺: Скрипт получен! / 🇺🇸: Script received!`
                     );
                 }
+            } else {
+                await ctx.answerCallbackQuery(
+                    `🇷🇺: Ты ещё не подписался! / 🇺🇸: You haven't subscribed yet!`,
+                    { show_alert: true }
+                );
             }
         });
 
         // ==========================================
-        // 4.7. ОБРАБОТЧИК ТЕКСТОВЫХ СООБЩЕНИЙ (названия скриптов)
+        // ТЕКСТОВЫЕ СООБЩЕНИЯ
         // ==========================================
         bot.onMessage(async (ctx) => {
             const text = ctx.message.text || '';
             const userId = ctx.from.id;
             
-            // Игнорируем команды (они уже обработаны выше)
-            if (text.startsWith('/')) {
-                return;
-            }
+            if (text.startsWith('/')) return;
             
-            // Проверяем, есть ли такой скрипт
             const scriptName = text.trim().toLowerCase();
             
             if (SCRIPTS[scriptName]) {
-                // Скрипт найден → проверяем подписку
                 const isSubscribed = await isUserSubscribed(bot, userId, CONFIG.CHANNEL_USERNAME);
                 
                 if (isSubscribed) {
-                    // Подписан → выдаём скрипт
                     await ctx.reply(
-                        `✅ Вот твой скрипт!\n\n\`\`\`lua\n${SCRIPTS[scriptName]}\n\`\`\`\n\n📋 Нажми на текст, чтобы скопировать его.`,
+                        `✅ Вот твой скрипт! / Here is your script!\n\n\`\`\`lua\n${SCRIPTS[scriptName]}\n\`\`\`\n\n📋 Нажми на текст, чтобы скопировать его. / Click on the text to copy it.`,
                         { parse_mode: 'MarkdownV2' }
                     );
                 } else {
-                    // Не подписан → просим подписаться
                     await ctx.reply(
-                        `❌ Чтобы получить скрипт, подпишись на наш канал!\n\n` +
-                        `📌 Скрипт: ${scriptName}.lua\n\n` +
-                        `👇 Подпишись и нажми "Перепроверить".`,
+                        `🇷🇺: Чтобы получить скрипт, подпишись на канал!\n` +
+                        `🇺🇸: To get the script, subscribe to the channel!\n\n` +
+                        `📌 Скрипт / Script: ${scriptName}.lua`,
                         {
                             reply_markup: {
                                 inline_keyboard: [
-                                    [{ text: '📢 Подписаться на канал', url: CONFIG.CHANNEL_LINK }],
-                                    [{ text: '🔄 Перепроверить', callback_data: `check_${scriptName}` }]
+                                    [{ text: '📢 Подписаться / Subscribe', url: CONFIG.CHANNEL_LINK }],
+                                    [{ text: '🔄 Перепроверить / Check again', callback_data: `check_${scriptName}` }]
                                 ]
                             }
                         }
                     );
                 }
             } else {
-                // Скрипт не найден
-                const scriptList = Object.keys(SCRIPTS).map((name) => 
-                    `• ${name}.lua`
-                ).join('\n');
-                
+                const scriptList = Object.keys(SCRIPTS).map((name) => `• ${name}.lua`).join('\n');
                 await ctx.reply(
-                    `❌ Скрипт "${text}" не найден.\n\n` +
-                    `📚 Доступные скрипты:\n${scriptList}\n\n` +
-                    `📌 Напиши название скрипта, чтобы получить его.\n` +
-                    `Например: "example" или "bypass"`
+                    `❌ 🇷🇺: Скрипт "${text}" не найден. / 🇺🇸: Script "${text}" not found.\n\n` +
+                    `📚 🇷🇺: Доступные скрипты / 🇺🇸: Available scripts:\n${scriptList}\n\n` +
+                    `🇷🇺: По вопросам пишите / 🇺🇸: For questions, write to: ${CONFIG.SUPPORT_CONTACT}`
                 );
             }
         });
 
         // ==========================================
-        // 4.8. ОБРАБОТКА ВЕБХУКА (POST-запросы)
+        // ВЕБХУК
         // ==========================================
-        if (request.method === 'POST') {
-            try {
-                const update = await request.json();
-                await bot.processUpdate(update);
-                return new Response('OK', { status: 200 });
-            } catch (error) {
-                console.error('Ошибка обработки вебхука:', error);
-                return new Response('Error', { status: 500 });
-            }
+        try {
+            const update = await request.json();
+            await bot.processUpdate(update);
+            return new Response('OK', { status: 200 });
+        } catch (error) {
+            return new Response('Error', { status: 500 });
         }
-
-        // ==========================================
-        // 4.9. GET-ЗАПРОСЫ (информация)
-        // ==========================================
-        return new Response(
-            `🤖 Belxxx Bot (GitHub)\n` +
-            `Версия: ${CONFIG.VERSION}\n` +
-            `Статус: ✅ Работает\n` +
-            `Скриптов: ${Object.keys(SCRIPTS).length}\n` +
-            `Канал: @${CONFIG.CHANNEL_USERNAME}\n\n` +
-            `📁 Источник: GitHub\n` +
-            `📄 Формат: .lua\n\n` +
-            `📌 Напиши название скрипта, чтобы получить его.\n\n` +
-            `Для работы используй POST-запросы от Telegram.`,
-            { status: 200 }
-        );
     }
 };
